@@ -1,5 +1,6 @@
 'use client';
 import { useRef, useState } from 'react';
+import { v4 as uuidv4 } from 'uuid';
 import { useDualBroadcast } from '@/hooks/useDualBroadcast';
 
 export default function ExamRecorder({ examId }: { examId: string }) {
@@ -12,7 +13,7 @@ export default function ExamRecorder({ examId }: { examId: string }) {
     const res = await fetch('/api/ivs', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ examId }),
+      body: JSON.stringify({ examId: uuidv4() }),
     });
     const cfg = await res.json();
     await start({ ...cfg, preview: videoRef.current! });

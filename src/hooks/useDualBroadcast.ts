@@ -53,6 +53,8 @@ export function useDualBroadcast() {
       'screen',
       fullFrame
     );
+    console.log('____________sc', sc);
+    console.log('____________cfg', cfg);
     await sc.startBroadcast(cfg.screen.streamKey, cfg.screen.ingestEndpoint);
     screenRef.current = sc;
 
