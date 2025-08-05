@@ -34,11 +34,12 @@ async function ensureKeyValue(channelArn: string): Promise<string> {
 /*──────────────────────────────────────── allocate channel ────*/
 /* allocateChannel now takes an optional Set<string> of ARNs to ignore */
 async function allocateChannel(
+  env: 'DEV' | 'PROD',
   uuid: string,
   kind: 'SCREEN' | 'CAMERA',
   exclude: Set<string> = new Set()
 ) {
-  const desiredName = `${kind}_${uuid}`;
+  const desiredName = `${env}_${kind}_${uuid}`;
 
   // 1️⃣ list channels tied to our recording config
   const { channels } = await ivs.send(
@@ -84,11 +85,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     const used = new Set<string>();
-
-    const screen = await allocateChannel(examId, 'SCREEN', used);
+    const env = process.env.ENV as ('DEV' | 'PROD');
+    const screen = await allocateChannel(env, examId, 'SCREEN', used);
     used.add(screen.channelArn);                       // don't reuse this ARN
 
-    const camera = await allocateChannel(examId, 'CAMERA', used);
+    const camera = await allocateChannel(env, examId, 'CAMERA', used);
 
     res.status(200).json({
       screen: { ingestEndpoint: screen.ingestEndpoint, streamKey: screen.streamKey },
