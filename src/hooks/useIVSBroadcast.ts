@@ -21,7 +21,7 @@ export function useIVSBroadcast() {
     async (ingestEndpoint: string, streamKey: string, preview: HTMLVideoElement) => {
       /* 1️⃣ Capture devices */
       const cam    = await navigator.mediaDevices.getUserMedia({ video: true,  audio: true });          // :contentReference[oaicite:0]{index=0}
-      const screen = await navigator.mediaDevices.getDisplayMedia({ video: { frameRate: 60 } });         // :contentReference[oaicite:1]{index=1}
+      const screen = await navigator.mediaDevices.getDisplayMedia({ video: { frameRate: 30 } });         // :contentReference[oaicite:1]{index=1}
 
       /* 2️⃣ Local preview */
       preview.srcObject = cam;

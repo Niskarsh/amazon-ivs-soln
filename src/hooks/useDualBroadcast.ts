@@ -24,7 +24,7 @@ export function useDualBroadcast() {
   const start = useCallback(async (cfg: Endpoints) => {
     /* 1️⃣ capture sources */
     const screenStream = await navigator.mediaDevices.getDisplayMedia({
-      video: { frameRate: 60 },
+      video: { frameRate: 30 },
     });
     const camOrig = await navigator.mediaDevices.getUserMedia({
       video: true,

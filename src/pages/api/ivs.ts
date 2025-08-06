@@ -33,6 +33,8 @@ async function ensureKeyValue(channelArn: string): Promise<string> {
 
 /*──────────────────────────────────────── allocate channel ────*/
 /* allocateChannel now takes an optional Set<string> of ARNs to ignore */
+/* … (imports and helpers unchanged) … */
+
 async function allocateChannel(
   env: 'DEV' | 'PROD',
   uuid: string,
@@ -41,29 +43,44 @@ async function allocateChannel(
 ) {
   const desiredName = `${env}_${kind}_${uuid}`;
 
-  // 1️⃣ list channels tied to our recording config
+  /* 0️⃣ fast-path: channel already named for this exam -------------- */
   const { channels } = await ivs.send(
     new ListChannelsCommand({ filterByRecordingConfigurationArn: RECORDING_CONFIG_ARN })
   );
 
   for (const c of channels ?? []) {
-    if (exclude.has(c.arn!)) continue;                 // skip ones we already chose
+    if (c.name === desiredName) {                        // <- matches exactly
+      const { channel }  = await ivs.send(new GetChannelCommand({ arn: c.arn! }));
+      const streamKeyVal = await ensureKeyValue(c.arn!);
+      return {
+        channelArn:     c.arn!,
+        ingestEndpoint: channel!.ingestEndpoint!,
+        streamKey:      streamKeyVal,
+      };
+    }
+  }
 
+  /* 1️⃣ otherwise look for an idle channel -------------------------- */
+  for (const c of channels ?? []) {
+    if (exclude.has(c.arn!)) continue;
     try {
-      await ivs.send(new GetStreamCommand({ channelArn: c.arn! })); // LIVE → skip
+      await ivs.send(new GetStreamCommand({ channelArn: c.arn! })); // LIVE – skip
     } catch (err) {
       if (isChannelNotBroadcastingError(err)) {
-        // idle channel found – rename and use it
         await ivs.send(new UpdateChannelCommand({ arn: c.arn!, name: desiredName }));
-        const { channel } = await ivs.send(new GetChannelCommand({ arn: c.arn! }));
-        const streamKeyValue = await ensureKeyValue(c.arn!);
-        return { channelArn: c.arn!, ingestEndpoint: channel!.ingestEndpoint!, streamKey: streamKeyValue };
+        const { channel }  = await ivs.send(new GetChannelCommand({ arn: c.arn! }));
+        const streamKeyVal = await ensureKeyValue(c.arn!);
+        return {
+          channelArn:     c.arn!,
+          ingestEndpoint: channel!.ingestEndpoint!,
+          streamKey:      streamKeyVal,
+        };
       }
       throw err;
     }
   }
 
-  // 2️⃣ create a new channel when none are idle
+  /* 2️⃣ no idle channel → create new ------------------------------- */
   const { channel } = await ivs.send(
     new CreateChannelCommand({
       name: desiredName,
@@ -73,9 +90,16 @@ async function allocateChannel(
       authorized: false,
     })
   );
-  const streamKeyValue = await ensureKeyValue(channel!.arn!);
-  return { channelArn: channel!.arn!, ingestEndpoint: channel!.ingestEndpoint!, streamKey: streamKeyValue };
+  const streamKeyVal = await ensureKeyValue(channel!.arn!);
+  return {
+    channelArn:     channel!.arn!,
+    ingestEndpoint: channel!.ingestEndpoint!,
+    streamKey:      streamKeyVal,
+  };
 }
+
+/* handler stays the same (sequential + exclude-set) */
+
 
 
 /*────────────────────────────────────────────────── API handler ────*/
